@@ -12,10 +12,12 @@
 #define SIM_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
 	SIM_TOUCH,     /* a,b = x,y : one contact held from now on */
 	SIM_RELEASE,   /* lift all contacts */
+	SIM_BUTTONS,   /* a = held joypad bitmask */
 	SIM_KEY_ENTER,
 	SIM_KEY_UP,
 	SIM_KEY_DOWN,
@@ -26,6 +28,8 @@ typedef enum {
 
 /* Call before app_run(): choose framebuffer size and reset the script. */
 void sim_set_fb(int w, int h);
+void sim_set_refresh_timing(bool enabled);
+void sim_set_lcd(int x,int y,int w,int h);
 
 /* Schedule an event to fire when plat_input_poll is called for the `at`-th
  * time (0-based). Multiple events may share the same poll index. */
@@ -34,5 +38,6 @@ void sim_at(int at_poll, sim_evt_type_t type, int a, int b, const char *name);
 /* Records from the last present, for test assertions. */
 int  sim_last_present_mode(void);   /* plat_refresh_t of the last present */
 int  sim_present_count(void);
+int  sim_present_mode_count(int mode);
 
 #endif /* SIM_H */

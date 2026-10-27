@@ -16,6 +16,21 @@ launcher cleanup on termination, concurrent-launch prevention, automatic state
 save when leaving a game, corrected grayscale test output, an original DMG demo,
 and device-specific Chinese installation instructions.
 
+The local UI uses a shared Game Boy shell for the cartridge picker, gameplay
+and pause menu, with a grayscale bezel, cross-shaped D-pad, circular A/B,
+SELECT/START pills and speaker slots. Touch targets retain diagonal and combined
+input; menus also accept virtual controls. Selection refreshes stay within the
+black-and-white LCD so they do not degrade the shell's static gray shades.
+Press feedback adds key-cap travel, collapsing shadows, inverted A/B faces and
+direction highlights, including combined input. Only changed control bounds
+refresh, with B/W shadow textures and coalesced short-tap feedback; no idle
+animation. Input refreshes are independent of the game refresh busy clock.
+On KT3 the game remains 3x integer scaled. UI geometry/input checks run at three
+panel sizes with sanitizer instrumentation; feedback tests also check local
+damage, queued taps, release restoration and continued game refreshes.
+On-device verification of this UI
+revision is pending, distinct from the functional checks below.
+
 Dedicated boot support uses a project-owned Upstart job with one run per kernel
 boot, a USB disable flag, USB storage checks, and rollback on failed job
 validation. System setup and browser actions require on-device execution; file

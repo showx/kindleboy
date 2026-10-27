@@ -35,10 +35,11 @@ static void build_dither(void)
 
 void render_layout(render_cfg_t *cfg, int fb_w, int fb_h, int top_reserve, int min_overlay_h)
 {
-	int s = fb_w / GB_W;
+	int u = fb_w >= 800 ? 3 : 2;
+	int s = (fb_w - 28*u) / GB_W;
 	if (s < 1) s = 1;
 	/* Shrink until the game fits between the status bar and the overlay. */
-	while (s > 1 && s * GB_H > fb_h - top_reserve - min_overlay_h)
+	while (s > 1 && s * GB_H > fb_h - top_reserve - 24*u - min_overlay_h)
 		s--;
 
 	cfg->scale  = s;
@@ -46,7 +47,7 @@ void render_layout(render_cfg_t *cfg, int fb_w, int fb_h, int top_reserve, int m
 	cfg->game_h = s * GB_H;
 	cfg->dst_x  = (fb_w - cfg->game_w) / 2;         /* center horizontally */
 	if (cfg->dst_x < 0) cfg->dst_x = 0;
-	cfg->dst_y  = top_reserve + 4;                   /* below the status bar */
+	cfg->dst_y  = top_reserve + 16*u;   /* room for the engraved bezel header */
 	if (cfg->dst_y + cfg->game_h > fb_h)
 		cfg->dst_y = 0;
 }

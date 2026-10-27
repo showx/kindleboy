@@ -25,7 +25,7 @@ STD         = -std=gnu11
 CORE_SRC = \
 	src/main.c \
 	src/core/emu.c src/core/render.c src/core/ui.c src/core/status.c src/core/config.c \
-	src/core/overlay.c src/core/browser.c src/core/menu.c src/core/app.c \
+	src/core/skin.c src/core/overlay.c src/core/browser.c src/core/menu.c src/core/app.c \
 	src/core/peanut_impl.c \
 	vendor/minigb_apu/minigb_apu.c
 
@@ -37,7 +37,7 @@ KINDLE_SRC = $(CORE_SRC) \
 
 DESKTOP_SRC = $(CORE_SRC) src/platform/desktop/platform_sdl.c
 
-.PHONY: all desktop kindle fbink deploy headless sim statetest clean cleanall
+.PHONY: all desktop kindle fbink deploy headless sim statetest uitest clean cleanall
 
 all: desktop
 
@@ -84,7 +84,7 @@ deploy: build/kindleboy
 
 # ---- test harnesses (native) ---------------------------------------------
 TEST_CORE = src/core/emu.c src/core/render.c src/core/ui.c src/core/status.c src/core/config.c \
-	src/core/overlay.c src/core/browser.c src/core/menu.c src/core/app.c \
+	src/core/skin.c src/core/overlay.c src/core/browser.c src/core/menu.c src/core/app.c \
 	src/core/peanut_impl.c vendor/minigb_apu/minigb_apu.c
 
 headless: build/headless
@@ -101,6 +101,11 @@ statetest: build/statetest
 build/statetest: test/statetest.c src/core/emu.c src/core/peanut_impl.c vendor/minigb_apu/minigb_apu.c
 	@mkdir -p build
 	$(CC) $(STD) -O2 $(WARN) $(INCLUDES) $^ -lm -o $@
+
+uitest: build/uitest
+build/uitest: test/uitest.c src/core/render.c src/core/ui.c src/core/skin.c src/core/status.c src/core/overlay.c src/core/browser.c src/core/menu.c
+	@mkdir -p build
+	$(CC) $(STD) -O1 -g -fno-pie -no-pie -fsanitize=address,undefined $(WARN) $(INCLUDES) $^ -lm -o $@
 
 clean:
 	rm -rf build

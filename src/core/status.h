@@ -13,6 +13,7 @@
 
 /* Height in pixels of the status strip at the top of the screen. */
 int  status_height(int cw);
+int  status_content_width(int cw);
 
 /* Draw the strip into [0, status_height). batt_pct < 0 hides the battery.
  * ff_on shows a ">>" marker; low inverts the battery reading as a warning. */

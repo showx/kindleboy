@@ -34,7 +34,7 @@
 
 1. 先打开书库中的 **KindleBoy** 普通入口。
 2. 从游戏列表选择 `KindleBoy-Demo.gb`。应看到四级灰度图案和文字；按 A 反色，按 B 恢复。
-3. 检查方向键、A/B、START/SELECT 是否响应；MENU 打开暂停菜单，DEGHOST 清理残影。
+3. 检查方向键、A/B、START/SELECT 是否响应；顶部 MENU 打开暂停菜单，CLEAN 清理残影，3X 切换三倍速。
 4. 验证 SAVE STATE / LOAD STATE，再退出并重新进入，检查续玩和 `.sav`、`.st` 存档。
 5. 普通模式确认正常后，再测试 **KindleBoy-Dedicated**。退出模拟器后，阅读界面恢复可能需要数十秒。
 
@@ -44,7 +44,7 @@
 
 - 启动失败：重新连接 USB，查看根目录 `kindleboy.log`。
 - 没有可运行入口：先核对越狱是否完成，检查官方当前的后续安装要求。
-- 画面残影：使用 DEGHOST，或暂停菜单切换 QUALITY。
+- 画面残影：使用顶部 CLEAN，或暂停菜单切换 QUALITY。
 - 触摸偏移或组合按键无效：保留日志中的 `fbink:` 和 `input:` 行，继续调试 KT3 的输入适配。
 - 进程被强制终止后再次启动提示 session directory exists：重启可清除临时目录；不要重复开启多个实例。
 - 游戏中先正常退出，再连接 USB 传输游戏或存档。
@@ -85,7 +85,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\disable-autostart.
 - 开机或重新启动后自动进入 Game Boy 游戏列表。
 - 导入游戏：先用 MENU → EXIT EMULATOR 退出，连接 USB，把自己的 `.gb` 文件复制到 `roms/gb/`，安全弹出后从书库的 KindleBoy 入口启动，或重新启动设备。
 - 存档：MENU → SAVE STATE / LOAD STATE；正常退出时也会自动保存续玩状态。存档与 ROM 放在同一目录，`.sav` 是电池存档，`.st` 是本版本的即时存档。
-- 返回游戏列表：MENU → QUIT TO LIST。
+- 返回游戏列表：MENU → GAME SELECT。
 - 返回 Kindle 界面：MENU → EXIT EMULATOR。
-- 清理残影：DEGHOST，或暂停菜单中的 DEGHOST NOW。
+- 清理残影：顶部 CLEAN，或暂停菜单中的 CLEAN SCREEN。
+- 游戏列表和暂停菜单可以用方向键选择，A/START 确认、B 返回；列表左右翻页。直接触摸列表和菜单也可操作。
+- 按住按键时出现下沉、高亮和阴影变化，松开恢复；墨水屏上快速短按的视觉效果会短暂保留，不延长实际游戏输入。
 - 临时保留阅读界面：退出模拟器后不会在同一次开机中重复自动打开；需要长期关闭自启时，使用第 4 节的 USB 关闭标记。
+
+### 更新界面
+
+已安装并验证自启的设备，只需退出模拟器、连接 USB，然后重新运行 `install-device.ps1 -DriveRoot H:\`。更新后安全弹出，打开书库的 KindleBoy 即可；无需再次运行 Setup。安装脚本保留配置和存档，并备份被覆盖的项目文件。

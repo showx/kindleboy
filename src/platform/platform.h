@@ -42,7 +42,8 @@ typedef enum {
 	REFRESH_BW,        /* DU   ~250ms        — fallback / slower gameplay  */
 	REFRESH_QUALITY,   /* GL16 ~450ms 16-gray non-flashing — quality mode  */
 	REFRESH_GRAY4,     /* DU4  ~250ms 4-gray non-flashing — still promotion */
-	REFRESH_FLASH      /* GC16 ~550ms full flash — deghost / transitions   */
+	REFRESH_FLASH,     /* GC16 ~550ms full flash — deghost / transitions   */
+	REFRESH_INPUT      /* DU, disjoint control feedback; no game-frame pacing */
 } plat_refresh_t;
 
 /* Push canvas sub-rect (x,y,w,h) to the panel and schedule an e-ink refresh of
@@ -51,7 +52,9 @@ typedef enum {
  * flash). Non-blocking: it does not wait for the refresh to complete. */
 void plat_present(int x, int y, int w, int h, plat_refresh_t mode);
 
-/* True while the most recently scheduled refresh is still in flight. The main
+/* True while the most recent game/status refresh is still in flight. Local
+ * REFRESH_INPUT updates do not reset this clock: they touch disjoint controls.
+ * The main
  * loop uses this to avoid queueing refreshes faster than the panel drains them;
  * this is the natural e-ink frame pacer. On desktop this is always false. */
 bool plat_refresh_busy(void);

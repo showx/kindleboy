@@ -38,7 +38,7 @@ static FBInkConfig s_cfg_du4;    /* WFM_DU4  — 4-gray still promotion, no flas
 static FBInkConfig s_cfg_gl16;   /* WFM_GL16 — QUALITY */
 static FBInkConfig s_cfg_flash;  /* WFM_GC16 + flashing — deghost / transitions */
 
-static uint64_t s_last_refresh_us;
+static uint64_t s_game_busy_until_us;
 static int      s_last_mode;
 static bool     s_have_pending;
 
@@ -46,6 +46,8 @@ const kindle_disp_t *kindle_disp(void) { return s_disp.valid ? &s_disp : NULL; }
 
 int plat_init(plat_info_t *out)
 {
+	s_game_busy_until_us = 0;
+	s_have_pending = false;
 	FBInkConfig init_cfg = { 0 };
 	init_cfg.is_quiet = true;
 
@@ -115,6 +117,7 @@ static FBInkConfig *cfg_for(plat_refresh_t mode)
 	switch (mode) {
 	case REFRESH_FAST:    return &s_cfg_a2;
 	case REFRESH_BW:      return &s_cfg_du;
+	case REFRESH_INPUT:   return &s_cfg_du;
 	case REFRESH_GRAY4:   return &s_cfg_du4;
 	case REFRESH_QUALITY: return &s_cfg_gl16;
 	case REFRESH_FLASH:   return &s_cfg_flash;
@@ -128,6 +131,7 @@ static uint64_t wave_us(int mode)
 	switch (mode) {
 	case REFRESH_FAST:    return 115000;   /* A2 is ~120ms */
 	case REFRESH_BW:      return 230000;
+	case REFRESH_INPUT:   return 230000;
 	case REFRESH_GRAY4:   return 250000;
 	case REFRESH_QUALITY: return 450000;
 	case REFRESH_FLASH:   return 600000;
@@ -165,7 +169,9 @@ void plat_present(int x, int y, int w, int h, plat_refresh_t mode)
 	fbink_print_raw_data(s_fbfd, s_scratch, w, h, (size_t)w * h, xo, yo, &s_cfg_blit);
 	fbink_refresh(s_fbfd, (uint32_t)yo, (uint32_t)xo, (uint32_t)w, (uint32_t)h, cfg_for(mode));
 
-	s_last_refresh_us = plat_now_us();
+	/* Control feedback touches disjoint rectangles below/above the LCD. It
+	 * must not continually reset the game's busy clock during rapid input. */
+	if (mode != REFRESH_INPUT) s_game_busy_until_us = plat_now_us() + wave_us(mode);
 	s_last_mode = (int)mode;
 	s_have_pending = true;
 }
@@ -173,7 +179,7 @@ void plat_present(int x, int y, int w, int h, plat_refresh_t mode)
 bool plat_refresh_busy(void)
 {
 	if (!s_have_pending) return false;
-	return (plat_now_us() - s_last_refresh_us) < wave_us(s_last_mode);
+	return plat_now_us() < s_game_busy_until_us;
 }
 
 void plat_wait_refresh(void)
@@ -181,5 +187,6 @@ void plat_wait_refresh(void)
 	if (s_have_pending) {
 		fbink_wait_for_complete(s_fbfd, LAST_MARKER);
 		s_have_pending = false;
+		s_game_busy_until_us = 0;
 	}
 }

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #define MAX_EVENTS 512
 
@@ -30,9 +31,14 @@ static int       s_poll_count;
 /* current input level state */
 static int  s_touch_x, s_touch_y, s_touch_active;
 static bool s_quit;
+static uint8_t s_buttons;
+static bool s_refresh_timing;
+static uint64_t s_busy_until;
+static int s_lcd_x,s_lcd_y,s_lcd_w,s_lcd_h;
 
 static int  s_last_mode;
 static int  s_present_count;
+static int  s_mode_counts[REFRESH_INPUT+1];
 
 void sim_set_fb(int w, int h)
 {
@@ -43,7 +49,12 @@ void sim_set_fb(int w, int h)
 	s_touch_active = 0;
 	s_quit = false;
 	s_present_count = 0;
+	s_buttons=0; s_refresh_timing=false; s_busy_until=0;
+	memset(s_mode_counts,0,sizeof s_mode_counts);
 }
+
+void sim_set_refresh_timing(bool enabled) { s_refresh_timing=enabled; }
+void sim_set_lcd(int x,int y,int w,int h) { s_lcd_x=x; s_lcd_y=y; s_lcd_w=w; s_lcd_h=h; }
 
 void sim_at(int at_poll, sim_evt_type_t type, int a, int b, const char *name)
 {
@@ -56,6 +67,7 @@ void sim_at(int at_poll, sim_evt_type_t type, int a, int b, const char *name)
 
 int sim_last_present_mode(void) { return s_last_mode; }
 int sim_present_count(void)     { return s_present_count; }
+int sim_present_mode_count(int mode) { return s_mode_counts[mode]; }
 
 static void snapshot(const char *path)
 {
@@ -85,13 +97,21 @@ void plat_shutdown(void)
 
 void plat_present(int x, int y, int w, int h, plat_refresh_t mode)
 {
-	(void)x; (void)y; (void)w; (void)h;
+	assert(x>=0 && y>=0 && w>0 && h>0 && x+w<=s_fbw && y+h<=s_fbh);
+	if (mode==REFRESH_INPUT) {
+		/* Effects must never refresh game pixels or the whole screen. */
+		assert(x+w<=s_lcd_x || x>=s_lcd_x+s_lcd_w || y+h<=s_lcd_y || y>=s_lcd_y+s_lcd_h);
+	} else if (s_refresh_timing) {
+		uint64_t duration=mode==REFRESH_FAST?115000:mode==REFRESH_BW?230000:450000;
+		s_busy_until=s_clock_us+duration;
+	}
 	s_last_mode = (int)mode;
 	s_present_count++;
+	s_mode_counts[mode]++;
 }
 
-bool plat_refresh_busy(void) { return false; }
-void plat_wait_refresh(void) { }
+bool plat_refresh_busy(void) { return s_refresh_timing && s_clock_us<s_busy_until; }
+void plat_wait_refresh(void) { s_busy_until=0; }
 
 void plat_input_poll(plat_input_t *out)
 {
@@ -103,6 +123,7 @@ void plat_input_poll(plat_input_t *out)
 		switch (s_events[i].type) {
 		case SIM_TOUCH:   s_touch_active = 1; s_touch_x = s_events[i].a; s_touch_y = s_events[i].b; break;
 		case SIM_RELEASE: s_touch_active = 0; break;
+		case SIM_BUTTONS: s_buttons=(uint8_t)s_events[i].a; break;
 		case SIM_KEY_ENTER: out->key_enter = true; break;
 		case SIM_KEY_UP:    out->key_up = true; break;
 		case SIM_KEY_DOWN:  out->key_down = true; break;
@@ -120,6 +141,7 @@ void plat_input_poll(plat_input_t *out)
 		out->pts[0].id = 0;
 	}
 	out->quit_requested = s_quit;
+	out->direct_buttons = s_buttons;
 }
 
 uint64_t plat_now_us(void) { return s_clock_us; }

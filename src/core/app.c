@@ -22,6 +22,7 @@
 #include "emu.h"
 #include "render.h"
 #include "ui.h"
+#include "skin.h"
 #include "status.h"
 #include "overlay.h"
 #include "browser.h"
@@ -59,7 +60,9 @@ static const char   *cfg_path;
 static emu_t         emu;
 static bool          emu_loaded;
 static render_cfg_t  rcfg;
+static render_cfg_t  screen; /* fixed LCD/shell; game scale may be smaller */
 static overlay_t     overlay;
+static overlay_feedback_t feedback;
 static browser_t     browser;
 static menu_t        menu;
 
@@ -125,6 +128,25 @@ static void present_status(void)
 	plat_present(0, 0, fbw, status_h, REFRESH_QUALITY);
 }
 
+static void update_feedback(const plat_input_t *in)
+{
+	if (state == APP_EXIT) return;
+	ov_specials_t sp;
+	uint8_t bits=overlay_map(&overlay,in,&sp);
+	overlay_damage_t damage[OVERLAY_MAX_DAMAGE];
+	int n=overlay_feedback_update(&overlay,&feedback,canvas,fbw,fbh,bits,&sp,
+		state==APP_PLAYING && ff_on,plat_now_us(),damage);
+	for (int i=0;i<n;i++) {
+		overlay_damage_t *r=&damage[i];
+		plat_present(r->x,r->y,r->w,r->h,REFRESH_INPUT);
+	}
+}
+
+static void wait_menu_input(void)
+{
+	plat_input_wait(overlay_feedback_wait_ms(&feedback,plat_now_us(),500));
+}
+
 /* Open or close the audio sink to match cfg->audio. Cheap and idempotent; only
  * called on entering play, on the menu toggle, and on leaving play. If opening
  * fails (no player on the device, etc.) we just stay silent — audio never
@@ -147,10 +169,12 @@ static bool browser_needs_flash = true;
 
 static void show_browser(void)
 {
-	browser_draw(&browser, canvas, fbw, fbh, cached_batt);
+	browser_draw(&browser, canvas, fbw, fbh, &screen, cached_batt);
+	overlay_feedback_draw(&overlay,&feedback,canvas,fbw,fbh);
 	/* First paint clears with a full flash; scroll/selection steps use the fast
 	 * B/W DU waveform (~230ms) instead of GL16 (~450ms) so navigation is snappy. */
-	present_full(browser_needs_flash ? REFRESH_FLASH : REFRESH_BW);
+	if (browser_needs_flash) present_full(REFRESH_FLASH);
+	else plat_present(screen.dst_x, screen.dst_y, screen.game_w, screen.game_h, REFRESH_BW);
 	browser_needs_flash = false;
 	plat_wait_refresh();
 }
@@ -181,7 +205,8 @@ static void rescan_roms(void)
 
 static void show_menu(void)
 {
-	menu_draw(&menu, canvas, fbw, fbh, cfg->quality_mode, cfg->audio);
+	overlay_feedback_reset(&feedback,false);
+	menu_draw(&menu, canvas, fbw, fbh, &screen, cfg->quality_mode, cfg->audio, cached_batt);
 	present_full(REFRESH_FLASH);   /* flash doubles as a deghost */
 	plat_wait_refresh();
 }
@@ -194,11 +219,12 @@ static void repaint_play(void)
 	uint64_t nowp = plat_now_us();
 	refresh_battery(nowp);
 
-	ui_fill(canvas, fbw, fbh, 0, 0, fbw, fbh, 0xFF);
+	skin_draw(canvas, fbw, fbh, &screen);
 	draw_status();
 	render_game(&emu, &rcfg, canvas, fbw, 0, GB_H - 1, cfg->quality_mode,
 		    &rx, &ry, &rw, &rh);
 	overlay_draw(&overlay, canvas, fbw, fbh, ff_on);
+	overlay_feedback_reset(&feedback,ff_on);
 	present_full(REFRESH_FLASH);
 	plat_wait_refresh();
 
@@ -412,6 +438,8 @@ static void handle_menu_action(menu_action_t act)
 		plat_audio_close(); audio_open = false; /* silence when leaving the game */
 		rescan_roms();                          /* refresh list */
 		browser.touch_prev = true;              /* finger from this tap is still down */
+		browser.prev_buttons = 0xFF;
+		overlay_feedback_reset(&feedback,false);
 		browser_needs_flash = true;             /* clear the game off the panel */
 		state = APP_BROWSER;
 		show_browser();
@@ -441,22 +469,24 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 
 	status_h = status_height(fbw);
 	int min_overlay_h = fbh / 3;
-	render_layout(&rcfg, fbw, fbh, status_h, min_overlay_h);
+	render_layout(&screen, fbw, fbh, status_h, min_overlay_h);
+	rcfg = screen;
 	if (cfg->scale_override > 0) {
 		int s = cfg->scale_override;
 		/* Reject an override that wouldn't fit — otherwise render_game would
 		 * write past the canvas. Fall back to the auto layout. */
-		if (s * GB_W <= fbw && rcfg.dst_y + s * GB_H <= fbh) {
+		if (s <= screen.scale) {
 			rcfg.scale = s;
 			rcfg.game_w = s * GB_W;
 			rcfg.game_h = s * GB_H;
 			rcfg.dst_x = (fbw - rcfg.game_w) / 2;
-			if (rcfg.dst_x < 0) rcfg.dst_x = 0;
+			rcfg.dst_y = screen.dst_y + (screen.game_h - rcfg.game_h) / 2;
 		} else {
 			plat_log("app: scale_override %d does not fit; using auto", s);
 		}
 	}
-	overlay_layout(&overlay, &rcfg, fbw, fbh);
+	overlay_layout(&overlay, &screen, fbw, fbh);
+	overlay_feedback_reset(&feedback,false);
 
 	ensure_dir("/mnt/us/roms");
 	ensure_dir("/mnt/us/roms/gb");
@@ -501,7 +531,7 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 		if (state == APP_BROWSER) {
 			refresh_battery(plat_now_us());
 			bool changed = false;
-			int idx = browser_input(&browser, &in, fbw, fbh, &changed);
+			int idx = browser_input(&browser, &in, fbw, fbh, &screen, &changed);
 			if (idx == BROWSER_QUIT) {
 				state = APP_EXIT;
 			} else if (idx >= 0) {
@@ -509,20 +539,26 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 					browser_needs_flash = true;   /* clear the error screen */
 					show_browser();
 				}
+			} else if (idx == BROWSER_REFRESH) {
+				browser_needs_flash = true;
+				show_browser();
 			} else if (changed) {
 				show_browser();
 			}
-			plat_input_wait(500);   /* sleep until a touch, ~0 CPU while idle */
+			update_feedback(&in);
+			wait_menu_input();   /* release effect wakes once, then sleeps */
 			continue;
 		}
 
 		if (state == APP_MENU) {
 			bool changed = false;
-			menu_action_t act = menu_input(&menu, &in, fbw, fbh, &changed);
+			menu_action_t act = menu_input(&menu, &in, fbw, fbh, &screen, &changed);
 			if (act != MENU_NONE) handle_menu_action(act);
-			else if (changed) { menu_draw(&menu, canvas, fbw, fbh, cfg->quality_mode, cfg->audio);
-					    present_full(REFRESH_BW); }   /* fast B/W step */
-			plat_input_wait(500);
+			else if (changed) { menu_draw(&menu, canvas, fbw, fbh, &screen, cfg->quality_mode, cfg->audio, cached_batt);
+					    overlay_feedback_draw(&overlay,&feedback,canvas,fbw,fbh);
+					    plat_present(screen.dst_x, screen.dst_y, screen.game_w, screen.game_h, REFRESH_BW); }
+			update_feedback(&in);
+			wait_menu_input();
 			continue;
 		}
 
@@ -550,6 +586,7 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 			menu.touch_prev = true;     /* finger from this tap is still down */
 			state = APP_MENU;
 			show_menu();
+			update_feedback(&in);
 			next_tick = plat_now_us();
 			continue;
 		}
@@ -568,17 +605,9 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 			last_present_us = now;
 		}
 
-		/* Fast-forward: one tap toggles 3x speed; the button and the status-bar
-		 * marker invert while it's on. */
+		/* Fast-forward toggles independently of its visual press feedback. */
 		if (sp.ff && !prev_ff_touch) {
 			ff_on = !ff_on;
-			int bx, by, bw2, bh2;
-			overlay_draw_special(&overlay, canvas, fbw, fbh, OV_FF, ff_on,
-					     &bx, &by, &bw2, &bh2);
-			plat_present(bx, by, bw2, bh2, REFRESH_BW);
-			draw_status();
-			present_status();
-			last_status_us = now;
 		}
 		prev_deghost_touch = sp.deghost;
 		prev_ff_touch      = sp.ff;
@@ -602,6 +631,7 @@ int app_run(config_t *cfg_in, const char *cfg_path_in, const char *autostart_rom
 
 		now = plat_now_us();
 		play_present(now);
+		update_feedback(&in);
 
 		/* Keep the clock/battery strip current. */
 		if (now - last_status_us >= STATUS_REFRESH_US) {

@@ -15,6 +15,9 @@ void ui_fill(uint8_t *canvas, int cw, int ch, int x, int y, int w, int h, uint8_
 
 /* One-pixel rectangle outline. */
 void ui_rect(uint8_t *canvas, int cw, int ch, int x, int y, int w, int h, uint8_t shade);
+void ui_round_fill(uint8_t *canvas, int cw, int ch, int x, int y, int w, int h, int radius, uint8_t shade);
+void ui_circle(uint8_t *canvas, int cw, int ch, int cx, int cy, int radius, uint8_t shade);
+void ui_line(uint8_t *canvas, int cw, int ch, int x0, int y0, int x1, int y1, uint8_t shade);
 
 /* Draw a NUL-terminated string; each glyph is 8*px by 8*px. Returns the x
  * coordinate just past the last glyph. Non-printable/out-of-range chars render

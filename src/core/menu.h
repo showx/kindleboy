@@ -10,6 +10,7 @@
 
 #include <stdbool.h>
 #include "../platform/platform.h"
+#include "render.h"
 
 typedef enum {
 	MENU_NONE = 0,
@@ -26,12 +27,13 @@ typedef enum {
 typedef struct {
 	int  sel;
 	bool touch_prev;
+	uint8_t prev_buttons;
 } menu_t;
 
 void          menu_reset(menu_t *m);
-void          menu_draw(const menu_t *m, uint8_t *canvas, int cw, int ch, bool quality_mode, bool audio_on);
+void          menu_draw(const menu_t *m, uint8_t *canvas, int cw, int ch, const render_cfg_t *screen, bool quality_mode, bool audio_on, int batt_pct);
 /* Returns the chosen action (MENU_NONE if nothing this poll). Sets *changed
  * when the highlighted item moved (redraw hint for e-ink). */
-menu_action_t menu_input(menu_t *m, const plat_input_t *in, int cw, int ch, bool *changed);
+menu_action_t menu_input(menu_t *m, const plat_input_t *in, int cw, int ch, const render_cfg_t *screen, bool *changed);
 
 #endif /* MENU_H */

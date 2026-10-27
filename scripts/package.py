@@ -45,7 +45,8 @@ def main():
     manifest = {
         'model': 'KT3 (Kindle 8th Generation, 2016)',
         'firmware': '5.15.1.1', 'abi': 'arm-kindlepw2-linux-gnueabi (static)',
-        'hardwareValidation': 'KT3 normal mode, A/B, state save/load and exit verified by user and logs; Setup SUCCESS and dedicated autoboot confirmed by user',
+        'hardwareValidation': 'KT3 normal mode, A/B, state save/load and exit verified by user and logs; Setup SUCCESS and dedicated autoboot confirmed by user. New Game Boy UI validated off-device; visual/touch confirmation on hardware pending.',
+        'uiStyle': 'gameboy-dmg-press-feedback',
         'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())},
         'dependencies': json.loads((ROOT / 'dependencies.lock.json').read_text()),
     }
