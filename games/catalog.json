@@ -1,0 +1,36 @@
+{
+  "games": [
+    {
+      "file": "2048-Sanqui.gb",
+      "title": "2048",
+      "author": "Sanqui",
+      "homepage": "https://github.com/Sanqui/2048-gb",
+      "download": "https://sanqui.rustedlogic.net/etc/2048.gb",
+      "license": "zlib",
+      "sha256": "3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f",
+      "bytes": 32768
+    },
+    {
+      "file": "MinesweepGB.gb",
+      "title": "MinesweepGB",
+      "author": "lancekindle",
+      "homepage": "https://github.com/lancekindle/minesweepGB",
+      "revision": "a1d18a46b14f3126e3e2b2569e035ebd8a456b9e",
+      "license": "GPL-3.0",
+      "sha256": "e19e895e4b48d8554500a76f890805cd39a1ab86a4ccbb82a7e680222d226384",
+      "bytes": 32768
+    },
+    {
+      "file": "Tobu-Tobu-Girl.gb",
+      "title": "Tobu Tobu Girl",
+      "author": "Tangram Games",
+      "music": "potato-tan",
+      "homepage": "https://tangramgames.itch.io/tobutobugirl",
+      "license": "MIT (code), CC BY 4.0 (assets)",
+      "changes": "none",
+      "sha256": "5d3871cae77db2287807e8914fd21f76203e73aa3fec20955489d45cb4571d8f",
+      "bytes": 262144
+    }
+  ],
+  "verification": "Each ROM passed GB header checksum validation and 360 emulator frames; startup screens inspected. Full Kindle gameplay not yet tested."
+}

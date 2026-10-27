@@ -1,0 +1,18 @@
+{
+  "kindleboy": {
+    "repository": "itsParassharma/KindleBoy",
+    "revision": "b79baf19929586d4609ff38db0020589a8232aa1"
+  },
+  "fbink": {
+    "repository": "NiLuJe/FBInk",
+    "revision": "886f25f13368859ad8a899b88d04c26e19cda32e"
+  },
+  "stb": {
+    "repository": "NiLuJe/stb",
+    "revision": "dfa32facac4a16184dd66f8e482bf15a678f2bf3"
+  },
+  "toolchain": {
+    "url": "https://github.com/koreader/koxtoolchain/releases/download/2025.05/kindlepw2.tar.gz",
+    "sha256": "5e5c61970d24598fec50c3d609d0eb977570520d54d3ce74866dc87c37238506"
+  }
+}

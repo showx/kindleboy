@@ -1,0 +1,15 @@
+.local/
+build/
+dist/
+downloads/
+vendor/FBInk/
+*.gb
+*.gbc
+*.st
+*.pgm
+*.nes
+*.fds
+*.sav
+*.srm
+*.state
+
